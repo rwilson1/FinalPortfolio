@@ -154,18 +154,18 @@ basket_rules <- apriori(trans_data, parameter = list(sup = 0.04, conf = 0.5, tar
     ## Absolute minimum support count: 3000 
     ## 
     ## set item appearances ...[0 item(s)] done [0.00s].
-    ## set transactions ...[50 item(s), 75000 transaction(s)] done [0.02s].
+    ## set transactions ...[50 item(s), 75000 transaction(s)] done [0.03s].
     ## sorting and recoding items ... [50 item(s)] done [0.00s].
-    ## creating transaction tree ... done [0.03s].
+    ## creating transaction tree ... done [0.02s].
     ## checking subsets of size 1 2 3
 
     ## Warning in apriori(trans_data, parameter = list(sup = 0.04, conf =
     ## 0.5, : Mining stopped (maxlen reached). Only patterns up to a length of 3
     ## returned!
 
-    ##  done [0.00s].
+    ##  done [0.01s].
     ## writing ... [16 rule(s)] done [0.00s].
-    ## creating S4 object  ... done [0.01s].
+    ## creating S4 object  ... done [0.00s].
 
 ``` r
 # Removing rendunant rules (rules that are a subset of another)
@@ -280,7 +280,7 @@ basket_rules4 <- apriori(trans_data, parameter = list(sup = 0.02, conf = 0.5, ta
     ## Absolute minimum support count: 1500 
     ## 
     ## set item appearances ...[0 item(s)] done [0.00s].
-    ## set transactions ...[50 item(s), 75000 transaction(s)] done [0.02s].
+    ## set transactions ...[50 item(s), 75000 transaction(s)] done [0.01s].
     ## sorting and recoding items ... [50 item(s)] done [0.00s].
     ## creating transaction tree ... done [0.04s].
     ## checking subsets of size 1 2 3 4

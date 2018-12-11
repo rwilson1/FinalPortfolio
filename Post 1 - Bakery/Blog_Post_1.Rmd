@@ -2,7 +2,7 @@
 title: "Blog Post 1: Analyzing Transactional Data Using Assocation Rules"
 author: "Reed Gabriel"
 date: "December 6, 2018"
-output: rmarkdown::github_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
