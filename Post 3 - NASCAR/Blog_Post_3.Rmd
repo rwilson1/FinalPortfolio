@@ -1,0 +1,152 @@
+---
+title: "Blog Post 3: K-Means Clustering of NASCAR Drivers"
+author: "Reed Gabriel"
+date: "December 6, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The data used in this analysis comes from statistics of drivers during the 2018 Monster Energy NASCAR Cup Series. The file 'nascar2018.csv' contains the data used in the analysis. The 2018 season was dominated by what many experts deemed 'The Big 3' made up of drivers Kyle Busch, Kevin Harvick, and Martin Truex, Jr. This sparked a debate as to what drivers should be in the top tier, what drivers are in a tier below that, etc. We are going to try and solve this debate by clustering this data using the K-Means Clustering technique to determine what tier each driver should be placed in based on performance during the 2018 season.
+
+```{r}
+# Set working directory. Make sure the 'nascar2018.csv' file is placed in this location on your local system.
+setwd("~/BZAN 552 - Multivariate-Data Mining II/FinalPortfolio/Post 3 - NASCAR")
+
+# Now we need to first load in the data.
+nascar <- read.csv("nascar2018.csv", header = TRUE)
+
+dim(nascar)
+# This dataset has 73 rows (73 drivers) and 16 columns.
+```
+
+Before getting started, we can go ahead and remove certain columns that we are not going to use in this analysis. These columns include Points (points earned during the season) and Diff (points behind the 1st place driver). The points are altered during the playoff portion of the 2018 season so that drivers in the playoffs are thousands of points ahead of the non-playoff drivers in order to separate themselves. Therefore it isn't quite a fair representation of performance, so these columns will be removed. PlayoffPts, as opposed to standard Points based on the finshing position, will be kept since Playoff Points are earned and accumulated throughout the season by all drivers. We are also going to remove 'Miles' since it is fairly redundant of the number of laps completed.
+
+```{r}
+nascar$Points <- NULL
+nascar$Diff <- NULL
+nascar$Miles <- NULL
+
+# Checking the data for missing values.
+nrow(nascar[!complete.cases(nascar),])
+
+# No missing values so we can continue.
+```
+
+Now we are going to add a few columns that we think are interesting and help determine driver performance.
+
+The first column we are going to add is 'DNFPerc'. It is simply the number of races that a driver did not finish (due to a crash, mechanicle failure, etc.). This can be calculated by subtracting the 'RAF' (Running at Finish) column from the 'Races' column and then dividing that by the 'Races' column. This gives the percentage of races that drivers did not finsh since some drivers run a different number of races during the season. For example, a driver that had 2 DNFs and competed in 36 races performed much better than a driver that had 2 DNFs but only competed in 5 races. We will then remove the 'RAF' column.
+
+The second column we are going to add is 'LLFPerc'. It is the 'LLF' (lead-lap finishes a.k.a. number of times drivers finished the race on the lead lap and did not get lapped) divided by 'Races'. This gives the pecentage of time that drivers finished the race on the lead lap based on the number of races the drivers competed in. We will then remove the 'LLF' column.
+
+The third column we are going to add is 'Led%'. It is the 'LapsLed' divided by the 'LapsComp' and is defined as the percentage of laps that drivers led based on the total number of laps that drivers completed.
+
+Lastly, we are going to remove the drivers that competed in fewer than 10 races in order to remove the drivers that did not race much so we can focus our clustering on drivers who somewhat regularly race. Additionally, a small sample size of less than 10 races could not accurately reflect the performance of a driver.
+
+```{r}
+nascar$DNFPerc <- (((nascar$Races - nascar$RAF) / nascar$Races) * 100)
+nascar$RAF <- NULL
+
+nascar$LLFPerc <- ((nascar$LLF / nascar$Races) * 100)
+nascar$LLF <- NULL
+
+nascar$LedPerc <- ((nascar$LapsLed / nascar$LapsComp) * 100)
+
+nascar <- nascar[!(nascar$Races < 10),]
+```
+
+Now we are going to look at the structure of the datset and define each column for a better understanding.
+
+```{r}
+str(nascar)
+# Column 1: Driver - Name of the driver
+# Column 2: Races - Number of races the driver competed in
+# Column 3: Wins - Number of times the driver won the race
+# Column 4: T5 - Number of top-5 finishes (positions 1-5)
+# Column 5: T10 - Number of top-10 finshes (positions 1-10)
+# Column 6: Poles - Number of poles won (number of times the driver started the race in the 1st position)
+# Column 7: LapsComp - Total number of laps completed
+# Column 8: LapsLed - Total number of laps completed in 1st place
+# Column 9: AvgStart - Average position the driver started in
+# Column 10: AvgFinish - Average position the driver finished in
+# Column 11: PlayoffPts - Total number of Playoff Points the driver accumulated
+# Column 12: DNFPerc - Percentage of times the driver did not finish the race
+# Column 13: LLFPerc - Percentage of times the driver finished the race on the lead lap
+# Column 14: LedPerc - Percentage of laps that the driver led
+```
+
+Now, we will select the columns that we want to include when clustering. We will then quickly check these variables for any significant outliers that could strongly affect the clustering. Lastly, we will standardize, or scale, the data. Otherwise, some of the variables could hold more weight over other variables. Standardizing corrects for the different measurements (percentages vs. counts for example) and allows all variables to be weighted evenly regardless of the different units of measurement.
+
+```{r}
+nascar_subs <- nascar[,c(3:6, 9:14)]
+
+#install.packages("DataExplorer")
+library(DataExplorer)
+DataExplorer::plot_histogram(nascar_subs)
+
+# From looking at the histograms of each variable, I do not see any significant outliers that could affect the analysis, so we can move forward with clustering.
+```
+
+We are now ready to cluster! We will cluster use the k-means algorithm with the most interpretable k of 4 clusters.
+
+```{r}
+set.seed(30)
+fit_k <- kmeans(nascar_subs, 4)
+fit_k
+```
+
+Before moving forward, I will take a more comprehensive approach in determining the number of clusters to use by minimizing SSE (sum of squared errors).
+
+```{r}
+set.seed(300)
+SSEs <- rep(NA,10) # a vector to store SSEs for different k's
+SSEs[1] <- fit_k$totss # total SSE if no clustering is done
+
+for(k in 2:16){
+    fit_k <- kmeans(nascar_subs, k)
+    SSEs[k] <- fit_k$tot.withinss
+}
+
+plot(1:16, SSEs, type = "b", main = "SSE from Clusters", xlab="Number of Clusters")
+```
+
+Following this approach, 4 clusters seems to be an appropriate number! There is a fairly noticeable drop in SSE as the number of clusters increases until the increase from 4 to 5 which is much smaller of a drop. We will move forward with the k-means clustering of 4 clusters we used above! We will take a closer look now at how many drivers are in each cluster as well as the average statistics of each cluster.
+
+```{r}
+set.seed(30)
+fit_k <- kmeans(nascar_subs, 4)
+
+# Adding column to dataset with the number of the cluster that each driver is in.
+nascar_subs$clusterid <- fit_k$cluster
+nascar$clusterid <- fit_k$cluster
+
+fit_k$size
+fit_k$centers
+```
+
+**Cluster 1:** Cluster 1 contains 3 drivers. This is by far the top tier as these drivers have on average about 6.7 wins and 21.7 top-5 finishes. They have the lowest average finish position, as well as the highest percentages of lead-lap finshes and laps led on average.
+
+**Cluster 2:** Cluster 2 contains 13 drivers. This appears to be the third tier from the top. On average these drivers have about 1.2 top-5 finishes and they also have an average finish of about 21, which is 8 positions better than the lowest tier. These drivers also finish on the lead lap about 39% of the time on average, which is much better than the 10% in the lowest tier.
+
+**Cluster 3:** Cluster 3 contains 13 drivers. This is the second tier of drivers; they are still very good, but not quite on the high level of the drivers in Cluster 1. The drivers in Cluster 3 win about 1.2 times and finish in the top 5 about 7.6 times on average. They have the second highest percentages of lead-lap finishes and laps led on average.
+
+**Cluster 4:** Cluster 4 contains 15 drivers. This appears to be the lowest tier of drivers, as these drivers do not have any wins and on average have 0.067 top-5 finshes. This cluster of drivers has an average starting position of 31.4 and an average finishing position of about 29. Additionally, on average they do not finish races approximately 20.7% of the times they race, which is the most of any cluster.
+
+In the graph below, we have created a heat map for the 4 clusters based on the averages of the statistics for the drivers in each cluster. I scaled the data for the use of this heat map for a more accurate depiction of the different clusters. This is a way to visualize the 4 clusters rather than just strictly comparing the numerical averages. The rectangles for each variable with darker red indicate higher values for that cluster, while darker blue values indicate lower values for that cluster. For example, we see dark blue rectangles for the average starting position and average finishing position for cluster 1 (which we know is the top tier) indiciating the best (lowest) positions on average. On the other hand, we see red rectangles for these statistics for Cluster 4, the lowest tier, indicating the worst (highest) average starting and finishing positions.
+
+```{r}
+#install.packages("gplots")
+library(gplots)
+
+heatmap(scale(fit_k$centers), scale = "none", col = bluered(100), Colv = NA, Rowv = NA, main = "Heat Map of Driver Statistics", ylab = "Clusters")
+```
+
+This last table below shows the name of the driver along with the number of the cluster that they have been placed in. One interesting thing to note is that 'The Big 3' drivers are in their own cluster, Cluster 1, which is the top tier. This signifies that as suspected, these drivers are in a league of their own! Their performance on the race track has separated themselves from the rest of the field. This analysis allows us to see which drivers are placed in the second tier and are looking to join The Big 3, as well as the other drivers in the bottom 2 tiers who have a lot of room for improvement!
+
+```{r}
+(ClusterAssignments <- data.frame(nascar$Driver, nascar$clusterid))
+```
+
+I hope you have enjoyed this analysis! Thanks for reading!
