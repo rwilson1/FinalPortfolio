@@ -13,7 +13,7 @@ The data used in this analysis comes from a chain of bakeries. The 'purchases.cs
 
 ```{r}
 # Set working directory. Make sure the 2 files are placed in this location on your local system.
-setwd("~/BZAN 552 - Multivariate-Data Mining II/FinalPortfolio")
+setwd("~/BZAN 552 - Multivariate-Data Mining II/FinalPortfolio/Post 1 - Bakery")
 
 # Now we need to first load in the data.
 purchases <- read.table("purchases.csv", head = FALSE, sep = ",", stringsAsFactors = FALSE)
@@ -39,6 +39,8 @@ colnames(purchases) <- items[,2]
 # Converting to matrix
 purchases <- as.matrix(purchases)
 # Converting to transactional form
+#install.packages("arules")
+library(arules)
 trans_data <- as(purchases, "transactions")
 
 # Let's take a look at the first 5 rows of our data in transactional form to make sure it looks correct.
@@ -58,9 +60,6 @@ Before starting our Market Basket Analysis, I would like to take a moment to def
 **Lift:** The lift ratio helps us determine if items are being bought at random or not. It tells us the factor by which the probability of finding an item A in the basket has increased (or decreased) once we know that an item B is in the basket. The higher the lift, the greater the chances of the RHS itemset being in the basket given that the LHS itemset is in the basket. A lift of 1 tells us that the probability of occurrence for the two events are independent of each other and the appearance of one item in the basket does not affect whether another certain item will be in the basket. A lift greater than 1 indicates a positive dependence and a complementary effect on the items, while a lift less than 1 indiciates a negative dependence and a substitution effect on the items.
 
 ```{r}
-#install.packages(arules)
-library(arules)
-
 # Let's start out by keeping things simple and make rules containing only 2-3 items.
 basket_rules <- apriori(trans_data, parameter = list(sup = 0.04, conf = 0.5, target="rules", minlen = 2, maxlen = 3))
 # Removing rendunant rules (rules that are a subset of another)
@@ -80,6 +79,8 @@ From these rules, we see that the top 3 involve the opera cake, apricot danish, 
 Below you will find a simple visualization for these top 7 rules. The darker the red color, the higher the lift and the larger the size of the circle, the higher the support with the grey arrows connecting the circles to the item name. We could use this plot with even more rules for a better comparison, however one needs to be careful because the more rules included, the messier the plot could become and therefore the more difficult it could be to read and interpret.
 
 ```{r}
+#install.packages("arulesViz")
+library(arulesViz)
 set.seed(200)
 plot(basket_rules_sorted[1:7], method = "graph")
 ```
